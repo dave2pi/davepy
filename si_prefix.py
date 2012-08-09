@@ -22,7 +22,7 @@ si_prefix = {
 	-24 : 'y'	# yocto
 }
 	
-def si(n, prefix=None):
+def si(n, prefix=None, space=1):
 	'''
 	Converts a number into a string using 
 	engineering notation.
@@ -33,6 +33,7 @@ def si(n, prefix=None):
 	
 	n = number to convert (int | float)
 	[prefix] = prefix to apply (int | string)
+	[space] = option to include a space between number and prefix (boolean)
 	'''
 	if n < 0:
 		sign = -1
@@ -70,7 +71,10 @@ def si(n, prefix=None):
 			coef = coef * 10
 	coef = coef * sign
 	# Return formatted string.
-	return '{0:.3f} '.format(coef).rjust(9) + si_prefix[exponent]
+	sp = ' '
+	if space == 0:
+		sp = ''
+	return '{0:.3f}'.format(coef).rjust(8) + sp + si_prefix[exponent]
 
 def sip(n, prefix=None):
 	'''

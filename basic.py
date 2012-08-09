@@ -6,7 +6,8 @@ def sum(*x):
 	'''
 	Sum of values.
 	'''
-	return sum(x)
+	from numpy.core.fromnumeric import sum as _sum
+	return _sum(x)
 
 def sum_inv(*x):
 	'''

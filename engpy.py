@@ -15,3 +15,4 @@ import resonant
 import nmr
 import e_series
 import magnetics
+import ltspice

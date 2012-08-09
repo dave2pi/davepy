@@ -1,7 +1,7 @@
 '''
 Some calcs for analog filters.
 '''
-import math as _math
+import all_pass
 
 def rc_f(r, c):
 	'''
@@ -11,7 +11,8 @@ def rc_f(r, c):
 	r = resistance (ohms)
 	c = capacitance (F)
 	'''
-	return 1.0/(2.0*_math.pi*r*c)
+	from math import pi
+	return 1.0/(2.0*pi*r*c)
 
 def rc_r(f, c):
 	'''
@@ -21,7 +22,8 @@ def rc_r(f, c):
 	f = cutoff frequency (Hz)
 	c = capacitance (F)
 	'''
-	return 1.0/(2.0*_math.pi*f*c)
+	from math import pi
+	return 1.0/(2.0*pi*f*c)
 
 def rc_c(f, r):
 	'''
@@ -31,7 +33,8 @@ def rc_c(f, r):
 	f = cutoff frequency (Hz)
 	r = resistance (ohms)
 	'''
-	return 1.0/(2.0*_math.pi*f*r)
+	from math import pi
+	return 1.0/(2.0*pi*f*r)
 
 def lc_f(l, c):
 	'''
@@ -41,7 +44,8 @@ def lc_f(l, c):
 	l = inductance (H)
 	c = capacitance (F)
 	'''
-	return 1.0/(2.0*_math.pi*_math.sqrt(l*c))
+	from math import pi, sqrt
+	return 1.0/(2.0*pi*sqrt(l*c))
 
 def lc_l(f, c):
 	'''
@@ -51,7 +55,8 @@ def lc_l(f, c):
 	f = cutoff frequency (Hz)
 	c = capacitance (F)
 	'''
-	return 1.0/(((2.0*_math.pi*f)**2)*c)
+	from math import pi
+	return 1.0/(((2.0*pi*f)**2)*c)
 
 def lc_c(f, l):
 	'''
@@ -61,4 +66,7 @@ def lc_c(f, l):
 	f = cutoff frequency (Hz)
 	l = inductance (H)
 	'''
-	return 1.0/(((2.0*_math.pi*f)**2)*l)
+	from math import pi
+	return 1.0/(((2.0*pi*f)**2)*l)
+	
+
