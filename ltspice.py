@@ -2,7 +2,11 @@
 LTSpice interface.
 '''
 	
-def run_sim_ac(cir, signal, sim_name='spice'):
+def format(v):
+	from si_prefix import si
+	return si(v, space=0).replace('M', 'meg')
+	
+def run_sim_ac(cir, signal, sim_name='spice', view_raw=0):
 	'''
 	Run a simulation. Plot data as an AC simulation.
 	'''
@@ -15,15 +19,18 @@ def run_sim_ac(cir, signal, sim_name='spice'):
 		f.write(cir)
 
 	# Run simulation using LTSpice
-	if run_sim(sim_name+'.cir') != 0:
+	if ltspice_sim(sim_name+'.cir') != 0:
 		return
 		
 	# Read LTSpice simulation log
 	print_sim_log(sim_name+'.log')
 	
+	# View .RAW file
+	if view_raw != 0:
+		ltspice_raw(sim_name+'.raw')
+	
 	# Use external utility to export .RAW file to a .CSV
-	if export_ac(sim_name+'.raw', sim_name+'.csv', 'frequency', signal) != 0:
-		return
+	export_ac(sim_name+'.raw', sim_name+'.csv', 'frequency', signal)
 		
 	# Read in .CSV data
 	f = []
@@ -51,6 +58,7 @@ def run_sim_ac(cir, signal, sim_name='spice'):
 	delete_sim_files(sim_name, cir=1, raw=1, log=1, csv=1, tmp=1)
 	
 	# Plot response
+	'''
 	subplot(311)
 	semilogx(f,mag)
 	ylabel('Magnitude (db)')
@@ -67,6 +75,27 @@ def run_sim_ac(cir, signal, sim_name='spice'):
 	xlabel(r'Frequency')
 	title(r'Group delay response')
 	subplots_adjust(hspace=1.0)
+	show()
+	'''
+	subplot(211)
+	semilogx(f,mag)
+	ylabel('Magnitude (db)')
+	xlabel(r'Frequency')
+	title(r'Frequency response')
+	subplot(212)
+	semilogx(f,phase_graph)
+	ylabel('Phase (degrees)')
+	xlabel(r'Frequency')
+	title(r'Phase response')
+	subplots_adjust(hspace=0.5)
+	show()
+	
+	subplot(211)
+	semilogx(f,delay)
+	ylabel('Delay (seconds)')
+	xlabel(r'Frequency')
+	title(r'Group delay response')
+	subplots_adjust(hspace=0.5)
 	show()
 
 def export_ac(fin, fout, *sig):
@@ -97,16 +126,24 @@ def print_sim_log(filename):
 			if l.upper().find('ERROR') != -1:
 				print l.strip()
 
-def ltspice(filename):
+def ltspice_sim(filename):
+	print 'Starting simulation...'
+	return ltspice('-b '+filename)
+
+def ltspice_raw(filename):
+	print 'Viewing .RAW file...'
+	return ltspice(filename)
+
+def ltspice(args):
 	'''
 	Run simulation using LTSpice
 	'''
 	import os
-	print 'Running LTSpice simulation...'
+	print 'Launching LTSpice...'
 	if os.name == 'posix':
-		errorlevel = os.system('wine /home/dave/.wine/drive_c/Program\ Files/LTC/LTSpiceIV/scad3.exe -b '+filename)
+		errorlevel = os.system(_escape_shell_chars('wine /home/dave/.wine/drive_c/Program\ Files/LTC/LTspiceIV/scad3.exe '+args))
 	elif os.name == 'nt':
-		errorlevel = os.system('C:\\Programs\\LinearTec\\LTspiceIV\\scad3.exe -b '+filename)
+		errorlevel = os.system('C:\\Programs\\LinearTec\\LTspiceIV\\scad3.exe '+args)
 	else:
 		print 'ERROR: Host environment "{0}" is not recognised.'.format(os.name)
 		errorlevel = 1
@@ -121,7 +158,7 @@ def ltsputil(cmd, fin, fout, args):
 	import os
 	print 'Running ltsputil...'
 	if os.name == 'posix':
-		errorlevel = os.system('wine /home/dave/.wine/drive_c/Program\ Files/LTC/LTSpiceIV/ltsputil.exe {0} {1} {2} {3}'.format(cmd, finfilename, foutfilename, args))
+		errorlevel = os.system(_escape_shell_chars('wine /home/dave/.wine/drive_c/Program\ Files/LTC/LTspiceIV/ltsputil.exe {0} {1} {2} {3}'.format(cmd, fin, fout, args)))
 	elif os.name == 'nt':
 		errorlevel = os.system('C:\\Programs\\LinearTec\\LTspiceIV\\ltsputil.exe {0} {1} {2} {3}'.format(cmd, fin, fout, args))
 	else:
@@ -146,7 +183,7 @@ def delete_sim_files(name, cir=0, raw=0, log=0, csv=0, tmp=0):
 	if tmp != 0:
 		args += '*.tmp '
 	if os.name == 'posix':
-		errorlevel = os.system('rm {0}'.format(args))
+		errorlevel = os.system(_escape_shell_chars('rm {0}'.format(args)))
 	elif os.name == 'nt':
 		errorlevel = os.system('del {0}'.format(args))
 	else:
@@ -155,3 +192,8 @@ def delete_sim_files(name, cir=0, raw=0, log=0, csv=0, tmp=0):
 	if errorlevel != 0:
 		print 'ERROR: delete_sim_files() returned {0}.'.format(errorlevel)
 	return errorlevel
+	
+def _escape_shell_chars(sh):
+	sh = sh.replace('(', '\(')
+	sh = sh.replace(')', '\)')
+	return sh

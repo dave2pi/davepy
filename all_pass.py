@@ -57,7 +57,7 @@ def const_r_n2_un(r, tgd, fr):
 		print '  Ls =', si(ls)
 		
 def min_l_n2(rs, rl, tgd, fr):
-	from math import pi, sqrt
+	from math import pi, sqrt, floor
 	from si_prefix import si
 	import ltspice
 	
@@ -85,21 +85,21 @@ L1 N001 N003 {3}
 L2 N003 out {3}
 R3 N003 0 {4}
 C1 out N001 {5}
-K1 L1 L2 1.0
 .ac dec 10000 {6} {7}
+K1 L1 L2 1.0
 .backanno
-.end
+.end 
 '''.format(
 		sim_name,
-		si(rs, space=0),
-		si(rl, space=0),
-		si(l/4.0, space=0),
-		si(r, space=0),
-		si(c, space=0),
-		si(fr/10.0, space=0),
-		si(fr*10.0, space=0)
+		ltspice.format(rs),
+		ltspice.format(rl),
+		ltspice.format(l/4.0),
+		ltspice.format(r),
+		ltspice.format(c),
+		ltspice.format(floor(fr)/10.0),
+		ltspice.format(floor(fr)*10.0)
 	)
-	ltspice.run_sim_ac(cir_min_l_n2, 'V(out)', sim_name)
+	ltspice.run_sim_ac(cir_min_l_n2, 'V(out)', sim_name, view_raw=1)
 	
 	return (c, l, r)
 	
