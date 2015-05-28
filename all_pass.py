@@ -56,7 +56,7 @@ def const_r_n2_un(r, tgd, fr):
 		print '  Cs =', si(cs)
 		print '  Ls =', si(ls)
 		
-def min_l_n2(rs, rl, tgd, fr):
+def min_l_n2(rs, rl, tgd, fr, sim=0, raw=0):
 	from math import pi, sqrt, floor
 	from si_prefix import si
 	import ltspice
@@ -73,6 +73,9 @@ def min_l_n2(rs, rl, tgd, fr):
 	print 'r:'.rjust(n), si(r)
 	print 'c:'.rjust(n), si(c)
 	print 'l:'.rjust(n), si(l)
+	
+	if sim==0:
+		return
 	
 	# Simulation
 	sim_name = 'spice'
@@ -99,13 +102,13 @@ K1 L1 L2 1.0
 		ltspice.format(floor(fr)/10.0),
 		ltspice.format(floor(fr)*10.0)
 	)
-	ltspice.run_sim_ac(cir_min_l_n2, 'V(out)', sim_name, view_raw=1)
-	
+	ltspice.run_sim_ac(cir_min_l_n2, 'V(out)', sim_name, view_raw=raw)
 	return (c, l, r)
 	
-def min_l_n4(rs, rl, tgd1, fr1, tgd2, fr2):
-	from math import pi, sqrt
+def min_l_n4(rs, rl, tgd1, fr1, tgd2, fr2, sim=0, raw=0):
+	from math import pi, sqrt, floor
 	from si_prefix import si
+	import ltspice
 	r = sqrt(rs*rl)
 	wr1 = 2.0*pi*fr1
 	wr2 = 2.0*pi*fr2
@@ -132,3 +135,38 @@ def min_l_n4(rs, rl, tgd1, fr1, tgd2, fr2):
 	print 'c1:'.rjust(n), si(c1)
 	print 'l2:'.rjust(n), si(l2)
 	print 'c2:'.rjust(n), si(c2)
+	
+	if sim==0:
+		return
+	
+	# Simulation
+	sim_name = 'spice'
+	cir_min_l_n2 = '''
+* {0}.cir
+R1 N001 N003 {1}
+R2 0 out {2}
+V1 N003 0 AC 1
+L2a N001 N004 {3}
+L2b N004 out {3}
+R3 N004 0 {4}
+C2 out N001 {5}
+L1 N001 N002 {6}
+C1 out N002 {7}
+.ac dec 10000 {8} {9}
+K1 L2a L2b 1.0
+.backanno
+.end
+
+'''.format(
+		sim_name,
+		ltspice.format(rs),
+		ltspice.format(rl),
+		ltspice.format(l2/4.0),
+		ltspice.format(r),
+		ltspice.format(c2),
+		ltspice.format(l1),
+		ltspice.format(c1),
+		ltspice.format(floor(min(fr1, fr2))/10.0),
+		ltspice.format(floor(max(fr1, fr2))*10.0)
+	)
+	ltspice.run_sim_ac(cir_min_l_n2, 'V(out)', sim_name, view_raw=raw)

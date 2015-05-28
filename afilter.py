@@ -56,7 +56,8 @@ def lc_l(f, c):
 	c = capacitance (F)
 	'''
 	from math import pi
-	return 1.0/(((2.0*pi*f)**2)*c)
+	w = 2.0*pi*f
+	return 1.0/(w**2*c)
 
 def lc_c(f, l):
 	'''
@@ -67,6 +68,7 @@ def lc_c(f, l):
 	l = inductance (H)
 	'''
 	from math import pi
-	return 1.0/(((2.0*pi*f)**2)*l)
+	w = 2.0*pi*f
+	return 1.0/(w**2*l)
 	
 

@@ -50,7 +50,10 @@ def si(n, prefix=None, space=1):
 		# Exponent specified as an integer.
 		exponent = prefix
 	else:
-		exponent = math.floor(math.log10(n))
+		if n == 0:
+			exponent = 0.0
+		else:
+			exponent = math.floor(math.log10(n))
 	# Ensure exponent is a float by this point so coef result is a float
 	coef = float(n)/10**exponent
 	# Place epbounds on exponent.

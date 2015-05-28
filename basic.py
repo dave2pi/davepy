@@ -46,16 +46,30 @@ def pot_div(v1, r1, r2, v2=0):
 	'''
 	return (v1-v2)*pot_div_ratio(r1,r2)+v2; 
 
-def x_capacitor(c, f):
+def x_cap(c, f):
 	'''
 	Calulate reactance of a capacitor.
 	'''
 	from math import pi
 	return -1.0/(2.0*pi*f*c)
 
-def x_inductor(l, f):
+def x_cap_i(x, f):
+	'''
+	Calulate capacitor for a reactance.
+	'''
+	from math import pi
+	return -1.0/(2.0*pi*f*x)
+
+def x_ind(l, f):
 	'''
 	Calculate reactance of an inductor.
 	'''
 	from math import pi
 	return 2.0*pi*f*l
+
+def x_ind_i(x, f):
+	'''
+	Calculate infuctor for a reactance.
+	'''
+	from math import pi
+	return x/(2.0*pi*f)

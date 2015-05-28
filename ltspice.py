@@ -1,108 +1,76 @@
 '''
 LTSpice interface.
+Require ltsputil to be installed at the location defined below.
 '''
 	
 def format(v):
 	from si_prefix import si
 	return si(v, space=0).replace('M', 'meg')
 	
-def run_sim_ac(cir, signal, sim_name='spice', view_raw=0):
+def run_sim_ac(cir, signal, sim_name='spice', view_raw=False, plot=0, quiet=True):
 	'''
 	Run a simulation. Plot data as an AC simulation.
 	'''
 	import csv
-	from math import pi, log10
+	from math import pi, log10, floor
 	from cmath import polar
 	from matplotlib.pyplot import subplot, semilogx, ylabel, xlabel, title, subplots_adjust, show
+	import numpy as np
 	
 	with open(sim_name+'.cir', 'w') as f:
 		f.write(cir)
 
 	# Run simulation using LTSpice
-	if ltspice_sim(sim_name+'.cir') != 0:
-		return
+	lt_error = ltspice_sim(sim_name+'.cir', quiet=quiet)
 		
 	# Read LTSpice simulation log
-	print_sim_log(sim_name+'.log')
+	try:
+		print_sim_log(sim_name+'.log')
+	except:
+		print 'Error:', sys.exc_info()[0]
+	
+	if lt_error != 0:
+		return
 	
 	# View .RAW file
-	if view_raw != 0:
-		ltspice_raw(sim_name+'.raw')
+	if view_raw != False:
+		ltspice_raw(sim_name+'.raw', quiet=quiet)
 	
 	# Use external utility to export .RAW file to a .CSV
-	export_ac(sim_name+'.raw', sim_name+'.csv', 'frequency', signal)
+	errorlevel = export_ac(sim_name+'.raw', sim_name+'.csv', quiet, 'frequency', signal)
 		
 	# Read in .CSV data
 	f = []
-	signal = []
+#	signal = []
+	mag = []
+	phase = []
+	phase_wrapped = []
 	with open(sim_name+'.csv', 'r') as file:
 		csv_reader = csv.reader(file, dialect='excel')
 		for row in csv_reader:
 			f.append(float(row[0]))
-			signal.append(complex(float(row[1]), float(row[2])))
-
-	# convert to polar
-	signal_polar = [polar(v) for v in signal]
-	mag = [20*log10(p[0]/1.0) for p in signal_polar]
-	phase = [360*p[1]/(2*pi) for p in signal_polar]
-	# Phase wrap around correction
-	phase_graph = phase[:]
-	for i in range(1, len(phase)):
-		if phase_graph[i-1]-phase_graph[i] < -350:
-			phase_graph[i] = phase_graph[i] - 360
-		elif phase_graph[i-1]-phase_graph[i] > 350:
-			phase_graph[i] = phase_graph[i] + 360
-	delay = [abs(phase[i])/(f[i]*360) for i in range(len(f))]
+			#signal.append(complex(float(row[1]), float(row[2])))
+			mag.append(float(row[1]))
+			phase.append(float(row[2]))
+			phase_wrapped.append(float(row[3]))
+	
+	# Calculate phase delay
+	#phase_delay = [abs(phase[i])/(f[i]*360) for i in range(len(f))]
+	
+	# Calculate group delay
+	#group_delay = np.gradient(np.array([sp[1] for sp in signal_polar]), np.array([2.0*pi*hz for hz in f]))
 	
 	# Delete simulation files
-	delete_sim_files(sim_name, cir=1, raw=1, log=1, csv=1, tmp=1)
+	delete_sim_files(sim_name, cir=1, raw=1, log=1, csv=1, tmp=1, quiet=quiet)
 	
-	# Plot response
-	'''
-	subplot(311)
-	semilogx(f,mag)
-	ylabel('Magnitude (db)')
-	xlabel(r'Frequency')
-	title(r'Frequency response')
-	subplot(312)
-	semilogx(f,phase_graph)
-	ylabel('Phase (degrees)')
-	xlabel(r'Frequency')
-	title(r'Phase response')
-	subplot(313)
-	semilogx(f,delay)
-	ylabel('Delay (seconds)')
-	xlabel(r'Frequency')
-	title(r'Group delay response')
-	subplots_adjust(hspace=1.0)
-	show()
-	'''
-	subplot(211)
-	semilogx(f,mag)
-	ylabel('Magnitude (db)')
-	xlabel(r'Frequency')
-	title(r'Frequency response')
-	subplot(212)
-	semilogx(f,phase_graph)
-	ylabel('Phase (degrees)')
-	xlabel(r'Frequency')
-	title(r'Phase response')
-	subplots_adjust(hspace=0.5)
-	show()
-	
-	subplot(211)
-	semilogx(f,delay)
-	ylabel('Delay (seconds)')
-	xlabel(r'Frequency')
-	title(r'Group delay response')
-	subplots_adjust(hspace=0.5)
-	show()
+	return f, mag, phase
 
-def export_ac(fin, fout, *sig):
+def export_ac(fin, fout, quiet, *sig):
 	'''
 	Use external utility to export .RAW file to a .CSV
 	'''
-	print 'Exporting to CSV...'
+	if quiet==False:
+		print 'Exporting to CSV...'
 	# Expand signal args
 	signals = ''
 	for s in sig:
@@ -112,7 +80,9 @@ def export_ac(fin, fout, *sig):
 	# -o = [o]verwrite
 	# -t = [t]ranspose to columns
 	# -0 = No header data
-	return ltsputil('-xot0', fin, fout, '"%14.6e"  "," "" '+signals)
+	# -d = dB
+	# -q = phase +/-pi
+	return ltsputil('-xot0dqp', fin, fout, '"%14.6e"  "," "" '+signals, quiet=quiet)
 
 def print_sim_log(filename):
 	'''
@@ -126,24 +96,27 @@ def print_sim_log(filename):
 			if l.upper().find('ERROR') != -1:
 				print l.strip()
 
-def ltspice_sim(filename):
-	print 'Starting simulation...'
-	return ltspice('-b '+filename)
+def ltspice_sim(filename, quiet=False):
+	if quiet==False:
+		print 'Starting simulation...'
+	return ltspice('-b '+filename, quiet=quiet)
 
-def ltspice_raw(filename):
-	print 'Viewing .RAW file...'
-	return ltspice(filename)
+def ltspice_raw(filename, quiet=False):
+	if quiet==False:
+		print 'Viewing .RAW file...'
+	return ltspice(filename, quiet=quiet)
 
-def ltspice(args):
+def ltspice(args, quiet=False):
 	'''
 	Run simulation using LTSpice
 	'''
 	import os
-	print 'Launching LTSpice...'
+	if quiet==False:
+		print 'Launching LTSpice...'
 	if os.name == 'posix':
 		errorlevel = os.system(_escape_shell_chars('wine /home/dave/.wine/drive_c/Program\ Files/LTC/LTspiceIV/scad3.exe '+args))
 	elif os.name == 'nt':
-		errorlevel = os.system('C:\\Programs\\LinearTec\\LTspiceIV\\scad3.exe '+args)
+		errorlevel = os.system('C:\\Programs32\\LTC\\LTspiceIV\\scad3.exe '+args)
 	else:
 		print 'ERROR: Host environment "{0}" is not recognised.'.format(os.name)
 		errorlevel = 1
@@ -151,16 +124,20 @@ def ltspice(args):
 		print 'ERROR: run_sim() returned {0}.'.format(errorlevel)
 	return errorlevel
 
-def ltsputil(cmd, fin, fout, args):
+def ltsputil(cmd, fin, fout, args, quiet=False):
 	'''
 	Use external utility ltsputil to export .RAW file to a .CSV
 	'''
 	import os
-	print 'Running ltsputil...'
+	if quiet==False:
+		print 'Running ltsputil...'
+		quiet = ' > nul'
+	else:
+		quiet = ''
 	if os.name == 'posix':
 		errorlevel = os.system(_escape_shell_chars('wine /home/dave/.wine/drive_c/Program\ Files/LTC/LTspiceIV/ltsputil.exe {0} {1} {2} {3}'.format(cmd, fin, fout, args)))
 	elif os.name == 'nt':
-		errorlevel = os.system('C:\\Programs\\LinearTec\\LTspiceIV\\ltsputil.exe {0} {1} {2} {3}'.format(cmd, fin, fout, args))
+		errorlevel = os.system('C:\\Programs32\\LTC\\LTspiceIV\\ltsputil.exe {0} {1} {2} {3} > nul'.format(cmd, fin, fout, args))
 	else:
 		print 'ERROR: Host environment "{0}" is not recognised.'.format(os.name)
 		errorlevel = 1
@@ -168,9 +145,10 @@ def ltsputil(cmd, fin, fout, args):
 		print 'ERROR: ltsputil() returned {0}.'.format(errorlevel)
 	return errorlevel
 
-def delete_sim_files(name, cir=0, raw=0, log=0, csv=0, tmp=0):
+def delete_sim_files(name, cir=0, raw=0, log=0, csv=0, tmp=0, quiet=False):
 	import os
-	print 'Deleting simulation files...'
+	if quiet==False:
+		print 'Deleting simulation files...'
 	args = ''
 	if cir != 0:
 		args += name+'.cir '

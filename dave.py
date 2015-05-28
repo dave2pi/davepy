@@ -16,3 +16,8 @@ import nmr
 import e_series
 import magnetics
 import ltspice
+import rf
+#import pyscope
+import dsp
+import quartus
+import cobs
